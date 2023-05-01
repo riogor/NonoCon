@@ -64,7 +64,8 @@ function load_puzzle {
 			if [[ "$line" =~ [0-9]+[a-z] ]]; then
 				_colored=true
 			else
-				_currow=$( echo "$line" | grep -P -o '[0-9]+' | wc -l )
+				_currow=$( echo "$line" | tr -cd ',' | wc -m )
+				_currow=$(( $_currow + 1 ))
 				_max_rowlen=$(( $_max_rowlen > $_currow ? $_max_rowlen : $_currow ))
 				a=3
 			fi
@@ -76,7 +77,8 @@ function load_puzzle {
 			if [[ "$line" =~ [0-9]+[a-z] ]]; then
 				_colored=true
 			else
-				_curcol=$( echo "$line" | grep -P -o '[0-9]+' | wc -l )
+				_curcol=$( echo "$line" | tr -cd ',' | wc -m )
+				_curcol=$(( $_curcol + 1 ))
 				_max_collen=$(( $_max_collen > $_curcol ? $_max_collen : $_curcol ))
 			fi
 			
@@ -102,7 +104,7 @@ function load_puzzle {
 
 #parse puzzles
 for item in ${nonograms_path_list[@]}; do
-	load_puzzle ${item}
+	load_puzzle ${item} 
 done
 
 echo Welcome to NonoCon - nonogram game in console
