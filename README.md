@@ -1,7 +1,13 @@
-# NonoCon - Nonogram game in console
+# **NonoCon** - Nonogram game in console
 
-Nonogram game, played in console
+Minimalistic nonogram game in console
+
+## Controls
+- Use your *Vim* beloved buttons (`hjkl`) to navigate the field
+- `f` to color/uncolor a cell
+- `q` to quit
 
 Uses puzzles from [nonogram-db](https://github.com/mikix/nonogram-db)
 
-Written in bash for a univ project
+Written fully in bash for a univ project
+

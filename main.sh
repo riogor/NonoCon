@@ -36,33 +36,32 @@ function CheckPuzzle {
 	CHECKPUZZLE_rowscnt=$INF
 	CHECKPUZZLE_colscnt=$INF
 	
-	while IFS= read -r _line
+	while IFS= read -r line
 	do
-		if [[ "$_line" =~ ^title ]]; then
-			[[ "$_line" =~ \"(.+)\" ]]
+		if [[ "$line" =~ ^title ]]; then
+			[[ "$line" =~ \"(.+)\" ]]
 			CHECKPUZZLE_title="${BASH_REMATCH[1]}"
 		fi
 		
-		if [[ "$_line" =~ ^width ]]; then
-			[[ "$_line" =~ [0-9]+ ]]
+		if [[ "$line" =~ ^width ]]; then
+			[[ "$line" =~ [0-9]+ ]]
 			CHECKPUZZLE_w=${BASH_REMATCH[0]}
 		fi
 		
-		if [[ "$_line" =~ ^height ]]; then
-			[[ "$_line" =~ [0-9]+ ]]
+		if [[ "$line" =~ ^height ]]; then
+			[[ "$line" =~ [0-9]+ ]]
 			CHECKPUZZLE_h=${BASH_REMATCH[0]}
 		fi
 		
-		if [[ "$_line" =~ ^color ]]; then
+		if [[ "$line" =~ ^color ]]; then
 			CHECKPUZZLE_iscolored=1
 		fi
 
 		if [[ $CHECKPUZZLE_rowscnt -lt $CHECKPUZZLE_h ]]; then
-			if [[ "$_line" =~ [0-9]+[a-z] ]]; then
+			if [[ "$line" =~ [0-9]+[a-z] ]]; then
 				CHECKPUZZLE_iscolored=1
 			else
-				_currow=$( echo "$_line" | tr -cd ',' | wc -m )
-				_currow=$(( _currow + 1 ))
+				_currow=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
 				CHECKPUZZLE_maxrows=$(( CHECKPUZZLE_maxrows > _currow ? CHECKPUZZLE_maxrows : _currow ))
 			fi
 			
@@ -70,28 +69,25 @@ function CheckPuzzle {
 		fi
 
 		if [[ $CHECKPUZZLE_colscnt -lt $CHECKPUZZLE_w ]]; then
-			if [[ "$_line" =~ [0-9]+[a-z] ]]; then
+			if [[ "$line" =~ [0-9]+[a-z] ]]; then
 				CHECKPUZZLE_iscolored=1
 			else
-				_curcol=$( echo "$_line" | tr -cd ',' | wc -m )
-				_curcol=$(( _curcol + 1 ))
+				_curcol=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
 				CHECKPUZZLE_maxcols=$(( CHECKPUZZLE_maxcols > _curcol ? CHECKPUZZLE_maxcols : _curcol ))
 			fi
 			
 			CHECKPUZZLE_colscnt=$(( CHECKPUZZLE_colscnt + 1 ))
 		fi
 		
-		if [[ "$_line" =~ ^rows ]]; then
+		if [[ "$line" =~ ^rows ]]; then
 			CHECKPUZZLE_rowscnt=0
 		fi
 
-		if [[ "$_line" =~ ^columns ]]; then
+		if [[ "$line" =~ ^columns ]]; then
 			CHECKPUZZLE_colscnt=0
 		fi
 		
 	done < "${CHECKPUZZLE_input}"
-	
-	# echo $CHECKPUZZLE_input $CHECKPUZZLE_iscolored $CHECKPUZZLE_maxcols $CHECKPUZZLE_maxrows
 	
 	# see layout for explanations
 	if [[ ( $CHECKPUZZLE_iscolored = 0 ) && ( $TERM_W -gt $(( CHECKPUZZLE_w + CHECKPUZZLE_maxrows + 1 )) ) 
@@ -153,7 +149,8 @@ COLS=( )
 field=( )
 GOAL=( )
 
-#CHECK THE FUCKING VARIABLES
+sumlen=0
+
 while IFS= read -r line
 do		
 	if [[ "$line" =~ ^goal ]]; then
@@ -166,13 +163,14 @@ do
 	fi
 
 	if [[ $rowscnt -lt $PUZZLE_H ]]; then
-		_tmparr=( $( echo "$line" | tr ',' '\n' | rev) )
-		
+		_tmparr=( $( echo "$line" | tr ',' '\n' ) )
+		sumlen=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
+
 		for i in "${!_tmparr[@]}"; do
 			ROWS+=( "${_tmparr[$i]}" )
 		done
 
-		for (( i = 0; i < $(( PUZZLE_MAXROWS - ${#_tmparr[@]} )); ++i )); do
+		for (( i = 0; i < $(( PUZZLE_MAXROWS - sumlen )); ++i )); do
 			ROWS+=( "0" )
 		done
 
@@ -181,12 +179,13 @@ do
 
 	if [[ $colscnt -lt $PUZZLE_W ]]; then
 		_tmparr=($( echo "$line" | tr ',' '\n' | rev ))
+		sumlen=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
 		
 		for i in "${!_tmparr[@]}"; do
 			COLS+=( "${_tmparr[$i]}" )
 		done
 
-		for (( i = 0; i < $(( PUZZLE_MAXCOLS - ${#_tmparr[@]} )); ++i )); do
+		for (( i = 0; i < $(( PUZZLE_MAXCOLS - sumlen )); ++i )); do
 			COLS+=( "0" )
 		done
 		
@@ -210,8 +209,9 @@ done
 
 clear
 
-#drawing a field
+### drawing a field
 
+tput sgr0
 tput cup 0 $(( (PUZZLE_W + PUZZLE_MAXROWS + 1)/2 ))
 echo "$PUZZLE_NAME"
 
@@ -236,35 +236,82 @@ for (( i = 0; i < FIELD_W; ++i )); do
 	fi
 done
 
-#numbers
-for i in "${!ROWS[@]}"; do
-	str=${ROWS[$i]}
+rownum=$(( PUZZLE_MAXCOLS + 2 ))
+numcnt=0
+sumlen=0
 
-	if [[ $str != "0" ]]; then
-		tput cup $(( i/PUZZLE_MAXROWS + PUZZLE_MAXCOLS + 1 + 1 )) $(( PUZZLE_MAXROWS - i%PUZZLE_MAXROWS - 1 ))
-		echo "${str:0:1}"
+tput sgr0
+
+#numbers
+for str in "${ROWS[@]}"; do
+	if [[ $sumlen = $PUZZLE_MAXROWS ]]; then
+		sumlen=0
+		numcnt=0
+		rownum=$(( rownum + 1 ))
+	fi
+
+	if [[ $str = "0" ]]; then
+		sumlen=$(( sumlen + 1 ))
+	else
+		if ! (( numcnt % 2 )); then
+			tput setab 0
+			tput setaf 7
+		else
+			tput setab 7
+			tput setaf 0
+		fi
+
+		tput cup $rownum $(( PUZZLE_MAXROWS - sumlen - ${#str} ))
+		echo "${str}"
+		sumlen=$(( sumlen + ${#str} ))
+		numcnt=$(( numcnt + 1 ))
 	fi
 done
 
-for i in "${!COLS[@]}"; do
-	str=${COLS[$i]}
+colnum=$(( PUZZLE_MAXROWS + 1 ))
+numcnt=0
+sumlen=0
 
-	if [[ $str != "0" ]]; then
-		tput cup $(( PUZZLE_MAXCOLS - i%PUZZLE_MAXCOLS - 1 + 1 )) $(( i/PUZZLE_MAXCOLS + PUZZLE_MAXROWS + 1 ))
-		echo "${str:0:1}"
+tput sgr0
+
+for str in "${COLS[@]}"; do
+	if [[ $sumlen = $PUZZLE_MAXCOLS ]]; then
+		sumlen=0
+		numcnt=0
+		colnum=$(( colnum + 1 ))
+	fi
+
+	if [[ $str = "0" ]]; then
+		sumlen=$(( sumlen + 1 ))
+	else
+		if ! (( numcnt % 2 )); then
+			tput setab 0
+			tput setaf 7
+		else
+			tput setab 7
+			tput setaf 0
+		fi
+
+		for (( j = 0; j < ${#str}; ++j )); do
+			tput cup $(( PUZZLE_MAXCOLS - sumlen - j )) $colnum
+			echo "${str:j:1}"
+		done
+		sumlen=$(( sumlen + ${#str} ))
+		numcnt=$(( numcnt + 1 ))
 	fi
 done
 
 function is_complete {
 	for i in "${!field[@]}"; do
 		if [[ ${field[i]} != ${GOAL[i]} ]]; then
-			return 0
+			return 1
 		fi
 	done
 
-	return 1
+	return 0
 };
 
+tput sgr0
 tput cnorm
 tput cup $(( PUZZLE_MAXCOLS + 2 )) $(( PUZZLE_MAXROWS + 1 ))
 
@@ -273,7 +320,7 @@ cur_y=$(( PUZZLE_MAXROWS + 1 ))
 
 change_cell=0
 
-while is_complete
+while ! is_complete
 do
 	read -rsn1 input
     case "$input"
@@ -314,4 +361,8 @@ do
 	change_cell=0
 done
 
-tput cup $TERM_H 0
+tput cup $(( $TERM_H - 2 )) 0
+
+if is_complete; then
+	echo CONGRATULATIONS!!!
+fi
