@@ -163,7 +163,7 @@ do
 	fi
 
 	if [[ $rowscnt -lt $PUZZLE_H ]]; then
-		_tmparr=( $( echo "$line" | tr ',' '\n' ) )
+		_tmparr=( $( echo "$line" | rev | tr ',' '\n' | rev ) )
 		sumlen=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
 
 		for i in "${!_tmparr[@]}"; do
@@ -178,7 +178,7 @@ do
 	fi
 
 	if [[ $colscnt -lt $PUZZLE_W ]]; then
-		_tmparr=($( echo "$line" | tr ',' '\n' | rev ))
+		_tmparr=($( echo "$line" | rev | tr ',' '\n' ))
 		sumlen=$(( ${#line} - $( echo "$line" | tr -cd ',' | wc -m ) ))
 		
 		for i in "${!_tmparr[@]}"; do
@@ -212,7 +212,7 @@ clear
 ### drawing a field
 
 tput sgr0
-tput cup 0 $(( (PUZZLE_W + PUZZLE_MAXROWS + 1)/2 ))
+tput cup 0 $(( FIELD_W/2 ))
 echo "$PUZZLE_NAME"
 
 #vignette part
